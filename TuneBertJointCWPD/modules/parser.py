@@ -5,11 +5,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import get_linear_schedule_with_warmup
 # from .optimizer import WarmupLinearSchedule
-from ..datautil.char_utils import calc_prf, cws_from_tag, calc_seg_f1, pos_tag_f1, parser_metric
-from ..datautil.dataloader import batch_iter, batch_variable
-from ..datautil.dependency import Dependency
-from ..log.logger_ import logger
-from ..modules.decode_alg.eisner import eisner
+from datautil.char_utils import calc_prf, cws_from_tag, calc_seg_f1, pos_tag_f1, parser_metric
+from datautil.dataloader import batch_iter, batch_variable
+from datautil.dependency import Dependency
+from log.logger_ import logger
+from modules.decode_alg.eisner import eisner
 
 
 
@@ -159,6 +159,23 @@ class BiaffineParser(object):
         ldep_f1 = ldep_metric[2]
         las = ldep_metric[1]
         return uas, las, tag_f1, seg_f1, udep_f1, ldep_f1
+
+    def test(self, test_data, args, vocab):
+        self.parser_model.eval()
+        sent_dep_tree_list = []
+        with torch.no_grad():
+            for batch_data in batch_iter(test_data, args.test_batch_size):
+                batcher = batch_variable(batch_data, vocab, args.device)
+                # batcher = (x.to(args.device) for x in batcher)
+                (bert_ids, bert_lens, bert_mask), true_tags, true_heads, true_rels = batcher
+                tag_score, arc_score, rel_score = self.parser_model(bert_ids, bert_lens, bert_mask)
+                pred_tags = tag_score.data.argmax(dim=-1)
+                pred_heads, pred_rels = self.decode(arc_score, rel_score, bert_lens.gt(0))
+                for i, sent_dep_tree in enumerate(
+                        self.dep_tree_iter(batch_data, pred_tags, pred_heads, pred_rels, vocab)):
+                    sent_dep_tree_list.append(sent_dep_tree)
+
+        return sent_dep_tree_list
 
     def dep_tree_iter(self, batch_gold_trees, pred_tags, pred_heads, pred_rels, vocab):
         if torch.is_tensor(pred_tags):

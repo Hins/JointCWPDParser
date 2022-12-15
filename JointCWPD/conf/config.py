@@ -29,7 +29,7 @@ def args_config():
     parse.add_argument('--batch_size', type=int, default=32, help='train batch size')
     parse.add_argument('--update_steps', type=int, default=2, help='gradient accumulation and update per x steps')
     parse.add_argument('--test_batch_size', type=int, default=64, help='test batch size')
-    parse.add_argument('--epoch', type=int, default=100, help='iteration of training')
+    parse.add_argument('--epoch', type=int, default=5, help='iteration of training')
 
     parse.add_argument('--char_embed_dim', type=int, default=100, help='char embedding size')
     parse.add_argument('--tag_embed_dim', type=int, default=100, help='pos_tag embedding size')

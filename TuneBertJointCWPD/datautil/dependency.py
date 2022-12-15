@@ -60,3 +60,12 @@ class Dependency(object):
 
     def __repr__(self):
         return str(self.__dict__)
+
+    def get_tag(self):
+        return self.tag
+
+    def get_head(self):
+        return self.head
+
+    def get_deprel(self):
+        return self.dep_rel

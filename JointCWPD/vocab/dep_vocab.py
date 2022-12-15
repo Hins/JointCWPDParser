@@ -1,5 +1,5 @@
 import os
-from ..datautil.dependency import read_deps
+from datautil.dependency import read_deps
 from collections import Counter
 import numpy as np
 from functools import wraps
@@ -171,11 +171,14 @@ class DepVocab(object):
                 if len(tokens) > 10:
                     idx = self._extwd2idx[tokens[0]]
                     vec = np.asarray(tokens[1:], dtype=np.float32)
+                    if np.size(vec) < 100:
+                        continue
                     embed_weights[idx] = vec
                     embed_weights[unk_idx] += vec
         # 已知词的词向量初始化的均值初始化未知向量
         embed_weights[unk_idx] /= wd_count
         embed_weights /= np.std(embed_weights)
+        print("embed_weights size is ", len(embed_weights))
         return embed_weights
 
     @_check_build_vocab

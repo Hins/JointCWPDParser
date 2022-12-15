@@ -2,12 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import time
-from ..modules.decode_alg.eisner import eisner
+from modules.decode_alg.eisner import eisner
 # from ..modules.decode_alg.MST import mst_decode
-from ..log.logger_ import logger
-from ..datautil.char_utils import cws_from_tag, calc_seg_f1, pos_tag_f1, parser_metric, calc_prf
-from ..datautil.dependency import Dependency
-from ..datautil.dataloader import batch_iter, batch_variable
+from log.logger_ import logger
+from datautil.char_utils import cws_from_tag, calc_seg_f1, pos_tag_f1, parser_metric, calc_prf
+from datautil.dependency import Dependency
+from datautil.dataloader import batch_iter, batch_variable
 
 
 class JointDParser(object):
@@ -62,7 +62,6 @@ class JointDParser(object):
     def train(self, train_data, dev_data, test_data, args, *vocab):
         args.max_step = args.epoch * ((len(train_data) + args.batch_size - 1) // (args.batch_size * args.update_steps))
         args.warmup_step = args.max_step // 10
-        print('max step:', args.max_step)
         optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, self.parser_model.parameters()), lr=args.learning_rate,
                           betas=(args.beta1, args.beta2), eps=args.eps, weight_decay=args.weight_decay)
         best_udep_f1 = 0
@@ -117,6 +116,7 @@ class JointDParser(object):
                 pred_heads, pred_rels = self.decode(arc_score, rel_score, non_pad_mask)
                 for i, sent_dep_tree in enumerate(self.dep_tree_iter(batch_data, pred_tags, pred_heads, pred_rels, char_vocab)):
                     gold_seg_lst, pred_seg_lst = cws_from_tag(batch_data[i]), cws_from_tag(sent_dep_tree)
+                    '''
                     num_gold_seg, num_pred_seg, num_seg_correct = calc_seg_f1(gold_seg_lst, pred_seg_lst)
                     all_gold_seg += num_gold_seg
                     all_pred_seg += num_pred_seg
@@ -132,14 +132,40 @@ class JointDParser(object):
                     all_rel_correct += num_rel_correct
                     all_gold_arc += num_gold_arc
                     all_pred_arc += num_pred_arc
+                    '''
 
         seg_f1 = 100. * calc_prf(all_gold_seg, all_pred_seg, all_seg_correct)[2]
         udep_f1 = 100. * calc_prf(all_gold_arc, all_pred_arc, all_arc_correct)[2]
         ldep_f1 = 100. * calc_prf(all_gold_arc, all_pred_arc, all_rel_correct)[2]
         tag_f1 = 100. * calc_prf(all_gold_tag, all_pred_tag, all_tag_correct)[2]
-        uas = all_arc_correct * 100. / all_gold_arc
-        las = all_rel_correct * 100. / all_gold_arc
-        return uas, las, tag_f1, seg_f1, udep_f1, ldep_f1
+        #uas = all_arc_correct * 100. / all_gold_arc
+        #las = all_rel_correct * 100. / all_gold_arc
+        return 0, 0, tag_f1, seg_f1, udep_f1, ldep_f1
+
+    def test(self, test_data, args, *vocab):
+        self.parser_model.eval()
+        char_vocab, bichar_vocab = vocab
+
+        pred_tags_list = []
+        pred_heads_list = []
+        pred_rels_list = []
+        pred_seg_all_list = []
+        with torch.no_grad():
+            for batch_data in batch_iter(test_data, args.test_batch_size):
+                batcher = batch_variable(batch_data, *vocab, args.device)
+                # batcher = (x.to(args.device) for x in batcher)
+                ngram_idxs, extngram_idxs, true_tags, true_heads, true_rels, non_pad_mask = batcher
+                tag_score, arc_score, rel_score = self.parser_model(ngram_idxs, extngram_idxs, non_pad_mask)
+                pred_tags = self.parser_model.tag_decode(tag_score, non_pad_mask)
+                pred_tags_list.append(pred_tags)
+                # pred_tags = tag_score.data.argmax(dim=-1)
+                pred_heads, pred_rels = self.decode(arc_score, rel_score, non_pad_mask)
+                pred_heads_list.append(pred_heads)
+                pred_rels_list.append(pred_rels)
+                for i, sent_dep_tree in enumerate(
+                        self.dep_tree_iter(batch_data, pred_tags, pred_heads, pred_rels, char_vocab)):
+                    pred_seg_all_list.append(sent_dep_tree)
+        return pred_seg_all_list
 
     def dep_tree_iter(self, batch_gold_trees, pred_tags, pred_heads, pred_rels, vocab):
         if torch.is_tensor(pred_tags):
