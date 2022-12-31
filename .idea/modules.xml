@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/JointCWPDParser.iml" filepath="$PROJECT_DIR$/.idea/JointCWPDParser.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../JointIE/.idea/JointIE.iml" filepath="$PROJECT_DIR$/../JointIE/.idea/JointIE.iml" />
     </modules>
   </component>
 </project>

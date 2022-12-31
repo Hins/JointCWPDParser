@@ -1,5 +1,5 @@
 import os
-from ..datautil.dependency import read_deps
+from datautil.dependency import read_deps
 from collections import Counter
 from functools import wraps
 from transformers import BertTokenizer
@@ -89,7 +89,7 @@ class DepVocab(object):
             del self.rel_counter
 
         if self.bert_tokenizer is None and self.bert_vocab is not None:
-            self.bert_tokenizer = BertTokenizer.from_pretrained(self.bert_vocab)
+            self.bert_tokenizer = BertTokenizer.from_pretrained("./model/bert-base-uncased-vocab.txt")
             print("Load bert_util vocabulary finished !!!")
         return self
 

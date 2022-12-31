@@ -6,7 +6,7 @@ from transformers import BertModel
 class BertEmbedding(nn.Module):
     def __init__(self, model_path, nb_layers, out_dim):
         super(BertEmbedding, self).__init__()
-        self.bert = BertModel.from_pretrained("bert-base-uncased", output_hidden_states=True)
+        self.bert = BertModel.from_pretrained("./model/", output_hidden_states=True)
         self.bert_layers = self.bert.config.num_hidden_layers
         self.nb_layers = nb_layers if nb_layers < self.bert_layers else self.bert_layers
         self.hidden_size = self.bert.config.hidden_size

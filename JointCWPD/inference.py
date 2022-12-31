@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import random
 from conf.config import get_data_path, args_config
-from datautil.dataloader import load_dataset
+from datautil.dataloader import load_dataset_from_array
 from vocab.dep_vocab import create_vocab
 from modules.model import ParserModel
 from pathlib import Path
@@ -38,7 +38,7 @@ def main(input_path, result_path):
     print('cuda available:', torch.cuda.is_available())
     print('cuDnn available:', torch.backends.cudnn.enabled)
     print('GPU numbers:', torch.cuda.device_count())
-    data_path = get_data_path("./conf/datapath.json")
+    data_path = get_data_path("./JointCWPD/conf/datapath.json")
     char_vocab, bichar_vocab = create_vocab(data_path['data']['test_data'])
     char_embed_weights = char_vocab.get_embedding_weights(data_path['pretrained']['char_embedding'])
     bichar_embed_weights = bichar_vocab.get_embedding_weights(data_path['pretrained']['bichar_embedding'])
@@ -60,7 +60,7 @@ def main(input_path, result_path):
     parser_model = parser_model.to(args.device)
     print('模型参数量：', sum(p.numel() for p in parser_model.parameters() if p.requires_grad))
 
-    biff_parser = torch.load('./model/model.pkl')
+    biff_parser = torch.load('./JointCWPD/model/model.pkl')
     json_obj = []
     for file in Path(input_path).glob('**/*.txt'):
         logging.info("file: {}".format(file))
@@ -70,19 +70,18 @@ def main(input_path, result_path):
         logging.info("dst_json: {}".format(dst_json))
         os.makedirs(os.path.dirname(dst_json), exist_ok=True)
 
+        predictions = []
         sentences = []
-        with open("./test.txt", 'w') as wf:
-            with open(str(file), 'r') as f:
-                for line in f:
-                    tokens = [word for word in jieba.cut(line.replace("\n", ""))]
-                    sentences.append(tokens)
-                    for idx, token in enumerate(tokens):
-                        wf.write(str(idx) + "\t" + token + "\t_\t_\t_\t_\t_\tamod\t_\t_\n")
-                    wf.write("\n")
+        with open(str(file), 'r') as f:
+            for line in f:
+                tokens = [word for word in jieba.cut(line.replace("\n", ""))]
+                sentences.append(tokens)
+                for idx, token in enumerate(tokens):
+                    predictions.append(str(idx) + "\t" + token + "\t_\t_\t_\t_\t_\tamod\t_\t_\n")
+                predictions.append("\n")
 
-        test_data = load_dataset("./test.txt", char_vocab)
+        test_data = load_dataset_from_array(predictions, char_vocab)
         print('test data size:', len(test_data))
-        os.remove("./test.txt")
         test_start_time = time.time()
         pred_seg_all_list = biff_parser.test(test_data, args, char_vocab, bichar_vocab)
         test_time = time.time() - test_start_time

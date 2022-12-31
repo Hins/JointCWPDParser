@@ -1,5 +1,5 @@
 import os
-from .dependency import read_deps
+from .dependency import read_deps, read_deps_from_array
 import numpy as np
 import torch
 
@@ -15,6 +15,11 @@ def ngram_generator(token_lst: list, n=2, start_idx=0):
             ngrams.append(''.join(token_lst[i:i+n]))
     return ngrams
 
+def load_dataset_from_array(sentences, vocab=None):
+    dataset = []
+    for deps in read_deps_from_array(sentences, vocab):
+        dataset.append(deps)
+    return dataset
 
 def load_dataset(path, vocab=None):
     assert os.path.exists(path)
